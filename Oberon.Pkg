@@ -1,0 +1,13 @@
+k,v1,v2
+package,Oberon,v5.0.20190117
+from,github.com/io-core,whenever
+license,PROJECTOBERON,NW JG PDR
+r,[core]/Edit,v5.0.0
+r,[core]/Kernel,v5.0.0
+r,[core]/Files,v5.0.0
+r,[core]/Modules,v5.0.0
+p,Display.Mod,e47776715940afe03ff657ce736a781ad178f3cbbbf260734651da62252943f7
+p,Viewers.Mod,68dd972188ccca1b91c0f1e26204ce2cdec73098501c0fc15db334bbfab6ffe7
+p,MenuViewers.Mod,3f49849f9103be0c466df69c1c73324137416a85bb27b993e943ae6e56c89f89
+p,Oberon.Mod,c795c8606339ba0d97f72690899abf83575830c742b73f4e95f01a6cf1e96460
+p,Input.Mod,eba1359853446824f10a53eb0c6e94f0865af340a4b49571aa1695880f8cda7d
