@@ -1,2 +1,29 @@
 # Oberon
-io-core Oberon package containing the Viewers.Mod, MenuViewers.Mod and Oberon.Mod from Oberon
+io-core Oberon package containing the Viewers.Mod, MenuViewers.Mod and Oberon.Mod from Project Oberon
+
+This package requires the inner core of Oberon as represented by the Modules and Files packages.
+
+In addition this package has a mutual dependency on the Edit package which provides text manipulation and font functionality.
+
+### License of the Project Oberon files
+
+Project Oberon, Revised Edition 2013
+
+Book copyright (C)2013 Niklaus Wirth and Juerg Gutknecht;
+software copyright (C)2013 Niklaus Wirth (NW), Juerg Gutknecht (JG), Paul
+Reed (PR/PDR).
+
+Permission to use, copy, modify, and/or distribute this software and its
+accompanying documentation (the "Software") for any purpose with or
+without fee is hereby granted, provided that the above copyright notice
+and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHORS DISCLAIM ALL WARRANTIES
+WITH REGARD TO THE SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY, FITNESS AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+AUTHORS BE LIABLE FOR ANY CLAIM, SPECIAL, DIRECT, INDIRECT, OR
+CONSEQUENTIAL DAMAGES OR ANY DAMAGES OR LIABILITY WHATSOEVER, WHETHER IN
+AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE DEALINGS IN OR USE OR PERFORMANCE OF THE SOFTWARE.
+
+
