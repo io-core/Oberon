@@ -1,4 +1,8 @@
 MODULE Input; (*NW 5.10.86 / 15.11.90 Ceres-2; PDR 21.4.12 / NW 15.5.2013 Ceres-4*)
+              (*CP 12.2018 changed to adopt NL instead of CR *)
+              (* Adapted for a customizable framebuffer size -- see git history *)
+              (*MS 1.2019 adapted for Unicode*)
+
   IMPORT SYSTEM;
 
   CONST msAdr = -40; kbdAdr = -36;
@@ -10,7 +14,7 @@ MODULE Input; (*NW 5.10.86 / 15.11.90 Ceres-2; PDR 21.4.12 / NW 15.5.2013 Ceres-
 
 (*FIFO implemented in hardware, because every read must be handled,
   including tracking the state of the Shift and Ctrl keys*)
-  
+
   PROCEDURE Peek();
   BEGIN
     IF SYSTEM.BIT(msAdr, 28) THEN
@@ -32,21 +36,24 @@ MODULE Input; (*NW 5.10.86 / 15.11.90 Ceres-2; PDR 21.4.12 / NW 15.5.2013 Ceres-
     RETURN ORD(Recd)
   END Available;
 
-  PROCEDURE Read*(VAR ch: CHAR);
+  PROCEDURE ReadUnicode*(VAR codepoint: INTEGER);
+  VAR ch: CHAR;
   BEGIN
     WHILE ~Recd DO Peek() END ;
     IF Shift OR Ctrl THEN INC(kbdCode, 80H) END; (*ctrl implies shift*)
   (* ch := kbdTab[kbdCode]; *)
     SYSTEM.GET(KTabAdr + kbdCode, ch);
     IF Ctrl THEN ch := CHR(ORD(ch) MOD 20H) END;
-    Recd := FALSE
-  END Read;
+    Recd := FALSE;
+    codepoint := ORD(ch);
+  END ReadUnicode;
 
   PROCEDURE Mouse*(VAR keys: SET; VAR x, y: INTEGER);
     VAR w: INTEGER;
   BEGIN SYSTEM.GET(msAdr, w);
     keys := SYSTEM.VAL(SET, w DIV 1000000H MOD 8);
-    x := w MOD 400H; y := (w DIV 1000H) MOD 400H;
+    x := w MOD 1000H; y := (w DIV 1000H) MOD 1000H;
+    IF x >= MW THEN x := MW-1 END;
     IF y >= MH THEN y := MH-1 END
   END Mouse;
 
@@ -62,7 +69,7 @@ MODULE Input; (*NW 5.10.86 / 15.11.90 Ceres-2; PDR 21.4.12 / NW 15.5.2013 Ceres-
       00 63 78 64 65 34 33 00  00 20 76 66 74 72 35 00
       00 6E 62 68 67 79 36 00  00 00 6D 6A 75 37 38 00
       00 2C 6B 69 6F 30 39 00  00 2E 2F 6C 3B 70 2D 00
-      00 00 27 00 5B 3D 00 00  00 00 0D 5D 00 5C 00 00
+      00 00 27 00 5B 3D 00 00  00 00 0A 5D 00 5C 00 00
       00 00 00 00 00 00 08 00  00 00 00 00 00 00 00 00
       00 7F 00 00 00 00 1B 00  00 00 00 00 00 00 00 00
       00 00 00 00 00 00 00 00  00 00 00 00 00 09 7E 00
