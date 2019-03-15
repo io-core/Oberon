@@ -4,7 +4,7 @@ from,github.com/io-core,whenever
 license,PROJECTOBERON,NW JG PDR MS CP
 r,[core]/Files,v5.0.0
 r,[core]/Modules,v5.0.0
-r,[core]/Edit,v5.1.0
+r,[io-core]/Edit,v5.1.0
 r,[core]/Kernel,v5.0.0
 p,Oberon.Mod,a427a83c7b04278a6d51ccef9a88c854656aeece870d9f8cb6bfe947400236d1
 p,Input.Mod,c4add3b8d70c0ae4a77c972bb7ae7fc77e3169566cb2afb9cadeadee998a055f
