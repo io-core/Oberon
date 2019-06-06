@@ -1,5 +1,6 @@
 MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015*)
                (*MS 1.2019 adapted for Unicode*)
+               (*CP 6.2019 shift-enter for command invocation*)
 
   IMPORT SYSTEM, Kernel, Files, Modules, Input, Display, Viewers, Fonts, Texts;
 
@@ -7,7 +8,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015*)
     consume* = 0; track* = 1; defocus* = 0; neutralize* = 1; mark* = 2;
     off = 0; idle = 1; active = 2;   (*task states*)
     BasicCycle = 20;
-    ESC = 1BX; SETSTAR = 1AX;
+    ESC = 1BX; SETSTAR = 1AX; SHIFTENTER = 0DX;
 
   TYPE Painter* = PROCEDURE (x, y: INTEGER);
     Marker* = RECORD Fade*, Draw*: Painter END;
@@ -370,6 +371,9 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015*)
           N.id := neutralize; Viewers.Broadcast(N); FadeCursor(Pointer); LED(0)
         ELSIF codepoint = ORD(SETSTAR) THEN
           N.id := mark; N.X := X; N.Y := Y; V := Viewers.This(X, Y); V.handle(V, N)
+        ELSIF codepoint = ORD(SHIFTENTER) THEN
+          (* position user cursor and output cursor, launch command *)
+          LED(13)
         ELSE M.id := consume; M.codepoint := codepoint; M.fnt := CurFnt; M.col := CurCol; M.voff := CurOff;
           FocusViewer.handle(FocusViewer, M); DEC(ActCnt)
         END
