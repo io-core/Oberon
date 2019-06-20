@@ -46,6 +46,8 @@ MODULE Input; (*NW 5.10.86 / 15.11.90 Ceres-2; PDR 21.4.12 / NW 15.5.2013 Ceres-
     IF Ctrl THEN ch := CHR(ORD(ch) MOD 20H) END;
     Recd := FALSE;
     codepoint := ORD(ch);
+    LED(kbdCode);
+    LED(ch);
   END ReadUnicode;
 
   PROCEDURE Mouse*(VAR keys: SET; VAR x, y: INTEGER);
@@ -64,7 +66,7 @@ MODULE Input; (*NW 5.10.86 / 15.11.90 Ceres-2; PDR 21.4.12 / NW 15.5.2013 Ceres-
   PROCEDURE Init*;
   BEGIN Up := FALSE; Shift := FALSE; Ctrl := FALSE; Recd := FALSE;
     KTabAdr := SYSTEM.ADR($
-      00 00 00 00 00 1A 00 00  00 00 00 00 00 09 60 00
+      00 00 00 00 00 1A 00 1C  00 00 00 00 00 09 60 00
       00 00 00 00 00 71 31 00  00 00 7A 73 61 77 32 00
       00 63 78 64 65 34 33 00  00 20 76 66 74 72 35 00
       00 6E 62 68 67 79 36 00  00 00 6D 6A 75 37 38 00
