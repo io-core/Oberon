@@ -2,12 +2,12 @@ k,v1,v2
 package,Oberon,v5.1.0
 from,github.com/io-core,whenever
 license,PROJECTOBERON,NW JG PDR MS CP
-r,[core]/Files,v5.0.0
-r,[core]/Modules,v5.0.0
 r,[io-core]/Edit,v5.1.0
 r,[core]/Kernel,v5.0.0
-p,Oberon.Mod,a427a83c7b04278a6d51ccef9a88c854656aeece870d9f8cb6bfe947400236d1
-p,Input.Mod,c4add3b8d70c0ae4a77c972bb7ae7fc77e3169566cb2afb9cadeadee998a055f
+r,[core]/Files,v5.0.0
+r,[core]/Modules,v5.0.0
 p,Display.Mod,4157ff39acbdc7dcfecab8903fb8a99386ec89c6247de09e224faf6d2e4f4657
 p,Viewers.Mod,68dd972188ccca1b91c0f1e26204ce2cdec73098501c0fc15db334bbfab6ffe7
 p,MenuViewers.Mod,3f49849f9103be0c466df69c1c73324137416a85bb27b993e943ae6e56c89f89
+p,Oberon.Mod,a427a83c7b04278a6d51ccef9a88c854656aeece870d9f8cb6bfe947400236d1
+p,Input.Mod,c4add3b8d70c0ae4a77c972bb7ae7fc77e3169566cb2afb9cadeadee998a055f
