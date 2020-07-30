@@ -1,7 +1,7 @@
 MODULE MenuViewers; (*JG 26.8.90 / 16.9.93 / NW 10.3.2013*)
   IMPORT Input, Display, Viewers, Oberon;
 
-  CONST extend* = 0; reduce* = 1; FrameColor = Display.white;
+  CONST extend* = 0; reduce* = 1; (*FrameColor = Display.white;*)
 
   TYPE Viewer* = POINTER TO ViewerDesc;
 
@@ -24,10 +24,10 @@ MODULE MenuViewers; (*JG 26.8.90 / 16.9.93 / NW 10.3.2013*)
 
   PROCEDURE Draw (V: Viewers.Viewer);
   BEGIN
-    Display.ReplConst(FrameColor, V.X, V.Y, 1, V.H, Display.replace);
-    Display.ReplConst(FrameColor, V.X + V.W - 1, V.Y, 1, V.H, Display.replace);
-    Display.ReplConst(FrameColor, V.X + 1, V.Y, V.W - 2, 1, Display.replace);
-    Display.ReplConst(FrameColor, V.X + 1, V.Y + V.H - 1, V.W - 2, 1, Display.replace)
+    Display.ReplConst(Display.white, V.X, V.Y, 1, V.H, Display.replace);
+    Display.ReplConst(Display.white, V.X + V.W - 1, V.Y, 1, V.H, Display.replace);
+    Display.ReplConst(Display.white, V.X + 1, V.Y, V.W - 2, 1, Display.replace);
+    Display.ReplConst(Display.white, V.X + 1, V.Y + V.H - 1, V.W - 2, 1, Display.replace)
   END Draw;
 
   PROCEDURE Extend (V: Viewer; newY: INTEGER);
@@ -35,28 +35,28 @@ MODULE MenuViewers; (*JG 26.8.90 / 16.9.93 / NW 10.3.2013*)
   BEGIN dH := V.Y - newY;
     IF dH > 0 THEN
       Display.ReplConst(Display.black, V.X + 1, newY + 1, V.W - 2, dH, Display.replace);
-      Display.ReplConst(FrameColor, V.X, newY, 1, dH, Display.replace);
-      Display.ReplConst(FrameColor, V.X + V.W - 1, newY, 1, dH, Display.replace);
-      Display.ReplConst(FrameColor, V.X + 1, newY, V.W - 2, 1, Display.replace)
+      Display.ReplConst(Display.white, V.X, newY, 1, dH, Display.replace);
+      Display.ReplConst(Display.white, V.X + V.W - 1, newY, 1, dH, Display.replace);
+      Display.ReplConst(Display.white, V.X + 1, newY, V.W - 2, 1, Display.replace)
     END
   END Extend;
 
   PROCEDURE Reduce (V: Viewer; newY: INTEGER);
-  BEGIN Display.ReplConst(FrameColor, V.X + 1, newY, V.W - 2, 1, Display.replace)
+  BEGIN Display.ReplConst(Display.white, V.X + 1, newY, V.W - 2, 1, Display.replace)
   END Reduce;
 
   PROCEDURE Grow (V: Viewer; oldH: INTEGER);
     VAR dH: INTEGER;
   BEGIN dH := V.H - oldH;
     IF dH > 0 THEN
-      Display.ReplConst(FrameColor, V.X, V.Y + oldH, 1, dH, Display.replace);
-      Display.ReplConst(FrameColor, V.X + V.W - 1, V.Y + oldH, 1, dH, Display.replace);
-      Display.ReplConst(FrameColor, V.X + 1, V.Y + V.H - 1, V.W - 2, 1, Display.replace)
+      Display.ReplConst(Display.white, V.X, V.Y + oldH, 1, dH, Display.replace);
+      Display.ReplConst(Display.white, V.X + V.W - 1, V.Y + oldH, 1, dH, Display.replace);
+      Display.ReplConst(Display.white, V.X + 1, V.Y + V.H - 1, V.W - 2, 1, Display.replace)
     END
   END Grow;
 
   PROCEDURE Shrink (V: Viewer; newH: INTEGER);
-  BEGIN Display.ReplConst(FrameColor, V.X + 1, V.Y + newH - 1, V.W - 2, 1, Display.replace)
+  BEGIN Display.ReplConst(Display.white, V.X + 1, V.Y + newH - 1, V.W - 2, 1, Display.replace)
   END Shrink;
 
   PROCEDURE Adjust (F: Display.Frame; id, dY, Y, H: INTEGER);
