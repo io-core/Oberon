@@ -1,9 +1,9 @@
-MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / AP 9.3.20 Extended Oberon*)
+MODULE Display;  (*NW 5.11.2013, others...*)
+(* Adapted for a customizable framebuffer size and variable base address *)
+
   IMPORT SYSTEM;
 
-  CONST  
-    replace* = 0; paint* = 1; invert* = 2;  (*modes*)
-    (* base = 0E7F00H;  adr of 1024 x 768 pixel, monocolor display frame*)
+  CONST replace* = 0; paint* = 1; invert* = 2;  (*modes*)
 
   TYPE Frame* = POINTER TO FrameDesc;
     FrameMsg* = RECORD END ;
@@ -42,9 +42,9 @@ MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / AP 9.3.20 Extended Oberon*)
 
   PROCEDURE ReplConst*(col, x, y, w, h, mode: INTEGER);
     VAR al, ar, a0, a1, i: INTEGER; left, right, mid, pix, pixl, pixr: SET;
-  BEGIN
+  BEGIN 
     al := Base + y*Span;
-    ar := ((x+w-1) DIV Pack)*4 + al;
+    ar := ((x+w-1) DIV Pack)*4 + al; 
     al := (x DIV Pack)*4 + al;
     IF ar = al THEN
       mid := {(x MOD Pack)*Depth .. ((((x+w) MOD Pack))*Depth)-1};
@@ -81,37 +81,8 @@ MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / AP 9.3.20 Extended Oberon*)
     END
   END ReplConst;
 
-(*
-  PROCEDURE CopyPatternClipped*(col, patadr, x, y, left, right, top, bot, mode: INTEGER);  (*only for modes = paint, invert*)
-    VAR a, a0, pwd: INTEGER;
-      w, h, pbt: BYTE; pix, mask: SET;
-  BEGIN (*0 <= top < h, 0 <= bot < h, top + bot < h, 0 <= right < w, 0 <= left < w, left + right < w*)
-    SYSTEM.GET(patadr, w); SYSTEM.GET(patadr+1, h); INC(patadr, 2 + bot*((w + 7) DIV 8)); h := h - top - bot;
-    a := Base + (x DIV 32)*4 + (y+bot)*128; x := x MOD 32; mask := -LSL({0 .. 31}, x);
-    FOR a0 := a TO a + (h-1)*128 BY 128 DO
-      (*build pattern line; w <= 32*)
-      SYSTEM.GET(patadr, pbt); INC(patadr); pwd := pbt;
-      IF w > 8 THEN SYSTEM.GET(patadr, pbt); INC(patadr); pwd := pbt*100H + pwd;
-        IF w > 16 THEN SYSTEM.GET(patadr, pbt); INC(patadr); pwd := pbt*10000H + pwd;
-          IF w > 24 THEN SYSTEM.GET(patadr, pbt); INC(patadr); pwd := pbt*1000000H + pwd END
-        END
-      END ;
-      IF left + right > 0 THEN pwd := SYSTEM.VAL(INTEGER, SYSTEM.VAL(SET, pwd) * {left .. w-1} * {0 .. w-right-1}) END ;
-      SYSTEM.GET(a0, pix);
-      IF mode = invert THEN SYSTEM.PUT(a0, SYSTEM.VAL(SET, LSL(pwd, x)) / pix)
-      ELSE SYSTEM.PUT(a0, SYSTEM.VAL(SET, LSL(pwd, x)) + pix)
-      END ;
-      IF x + w > 32 THEN (*spill over*)
-        SYSTEM.GET(a0+4, pix);
-        IF mode = invert THEN SYSTEM.PUT(a0+4, SYSTEM.VAL(SET, ASR(pwd, -x)) * mask/ pix)
-        ELSE SYSTEM.PUT(a0+4, SYSTEM.VAL(SET, ASR(pwd, -x)) * mask+ pix)
-        END
-      END
-    END
-  END CopyPatternClipped;
-*)
 
-  PROCEDURE CopyPatternClipped*(col, patadr, x, y, left, right, top, bot, mode: INTEGER);  (*only for modes = paint, invert*)
+  PROCEDURE CopyPattern*(col, patadr, x, y, mode: INTEGER);  (*only for modes = paint, invert*)
     VAR a0, pwd, i, j: INTEGER;
       w, h, pbt: BYTE; b0,pix: SET;
   BEGIN SYSTEM.GET(patadr, w); SYSTEM.GET(patadr+1, h); INC(patadr, 2);
@@ -130,20 +101,20 @@ MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / AP 9.3.20 Extended Oberon*)
         ELSE SYSTEM.PUT(a0, SYSTEM.VAL(SET, LSL(pwd, x MOD 32)) + pix)
         END;
       ELSE
-
-        FOR j:= 0 TO 31 DO
+	
+	FOR j:= 0 TO 31 DO
           b0:=SYSTEM.VAL(SET,pwd);
-          pbt := 255;
-          IF mode=invert THEN
-            IF j IN b0 THEN
-               SYSTEM.GET(a0+j+(x MOD Pack),pbt);
-               IF pbt = 255 THEN pbt := 0 ELSE pbt := 255 END;
-               SYSTEM.PUT(a0+j+(x MOD Pack),pbt)
+	  pbt := 255;
+	  IF mode=invert THEN
+            IF j IN b0 THEN 
+               SYSTEM.GET(a0+j+(x MOD Pack),pbt); 
+	       IF pbt = 255 THEN pbt := 0 ELSE pbt := 255 END;
+               SYSTEM.PUT(a0+j+(x MOD Pack),pbt) 
             END
-          ELSE
-            IF j IN b0 THEN SYSTEM.PUT(a0+j+(x MOD Pack),pbt) END
-          END
-        END
+	  ELSE
+	    IF j IN b0 THEN SYSTEM.PUT(a0+j+(x MOD Pack),pbt) END
+	  END
+	END
       END ;
       IF (x MOD 32) + w > 32 THEN (*spill over*)
         IF Depth = 1 THEN
@@ -156,69 +127,7 @@ MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / AP 9.3.20 Extended Oberon*)
       END;
       INC(a0, Span)
     END
-  END CopyPatternClipped;
-
-  PROCEDURE CopyPattern*(col, patadr, x, y, mode: INTEGER);  (*only for modes = paint, invert*)
-  BEGIN CopyPatternClipped(col, patadr, x, y, 0, 0, 0, 0, mode)
   END CopyPattern;
-
-(*
-  PROCEDURE CopyBlock*(sx, sy, w, h, dx, dy, mode: INTEGER); (*only for mode = replace*)
-    VAR sa, da, sa0, sa1, d, len: INTEGER;
-      u0, u1, u2, u3, v0, v1, v2, v3, n: INTEGER;
-      end, step: INTEGER;
-      src, dst, spill: SET;
-      m0, m1, m2, m3: SET;
-  BEGIN
-    u0 := sx DIV 32; u1 := sx MOD 32; u2 := (sx+w) DIV 32; u3 := (sx+w) MOD 32;
-    v0 := dx DIV 32; v1 := dx MOD 32; v2 := (dx+w) DIV 32; v3 := (dx+w) MOD 32;
-    sa := Base + u0*4 + sy*128; da := Base + v0*4 + dy*128;
-    d := da - sa; n := u1 - v1;   (*displacement in words and bits*)
-    len := (u2 - u0) * 4;
-    m0 := {v1 .. 31}; m2 := {v3 .. 31}; m3 := m0 / m2;
-    IF d >= 0 THEN (*copy up, scan down*) sa0 := sa + (h-1)*128; end := sa-128; step := -128
-    ELSE (*copy down, scan up*) sa0 := sa; end := sa + h*128; step := 128
-    END ;
-    WHILE sa0 # end DO
-      IF n >= 0 THEN (*shift right*) m1 := {n .. 31};
-        IF v1 + w >= 32 THEN
-          SYSTEM.GET(sa0+len, src); src := ROR(src, n);
-          SYSTEM.GET(sa0+len+d, dst);
-          SYSTEM.PUT(sa0+len+d, (dst * m2) + (src - m2));
-          spill := src - m1;
-          FOR sa1 := sa0 + len-4 TO sa0+4  BY -4 DO
-            SYSTEM.GET(sa1, src); src := ROR(src, n);
-            SYSTEM.PUT(sa1+d, spill + (src * m1));
-            spill := src - m1
-          END ;
-          SYSTEM.GET(sa0, src); src := ROR(src, n);
-          SYSTEM.GET(sa0+d, dst);
-          SYSTEM.PUT(sa0+d, (src * m0) + (dst - m0))
-        ELSE SYSTEM.GET(sa0, src); src := ROR(src, n);
-          SYSTEM.GET(sa0+d, dst);
-          SYSTEM.PUT(sa0+d, (src * m3) + (dst - m3))
-        END
-      ELSE (*shift left*) m1 := {-n .. 31};
-        SYSTEM.GET(sa0, src); src := ROR(src, n);
-        SYSTEM.GET(sa0+d, dst);
-        IF v1 + w < 32 THEN
-          SYSTEM.PUT(sa0+d, (dst - m3) + (src * m3))
-        ELSE SYSTEM.PUT(sa0+d, (dst - m0) + (src * m0));
-          spill := src - m1;
-          FOR sa1 := sa0+4 TO sa0 + len-4 BY 4 DO
-            SYSTEM.GET(sa1, src); src := ROR(src, n);
-            SYSTEM.PUT(sa1+d, spill + (src * m1));
-            spill := src - m1
-          END ;
-          SYSTEM.GET(sa0+len, src); src := ROR(src, n);
-          SYSTEM.GET(sa0+len+d, dst);
-          SYSTEM.PUT(sa0+len+d, (src - m2) + (dst * m2))
-        END
-      END ;
-      INC(sa0, step)
-    END
-  END CopyBlock;
-*)
 
   PROCEDURE CopyImage*(sx, sy, sw, sh, sdepth, sspan, dx, dy, ddepth, dspan, mode: INTEGER); (*only for mode = replace*)
     VAR sa, da, sa0, sa1, d, len: INTEGER;
@@ -281,33 +190,38 @@ MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / AP 9.3.20 Extended Oberon*)
     CopyImage(sx, sy, w, h, Depth, Span, dx, dy, Depth, Span, mode)
   END CopyBlock;
 
+
+
   PROCEDURE ReplPattern*(col, patadr, x, y, w, h, mode: INTEGER);
   (* pattern width = 32, fixed; pattern starts at patadr+4, for mode = invert only *)
-    VAR al, ar, a0, a1: INTEGER;
+    VAR al, ar, a0, a1, i: INTEGER;
       pta0, pta1: INTEGER;  (*pattern addresses*)
       ph: BYTE;
       left, right, mid, pix, pixl, pixr, ptw: SET;
-  BEGIN al := Base + y*128; SYSTEM.GET(patadr+1, ph);
+  BEGIN al := Base + y*Span; SYSTEM.GET(patadr+1, ph);
     pta0 := patadr+4; pta1 := ph*4 + pta0;
     ar := ((x+w-1) DIV 32)*4 + al; al := (x DIV 32)*4 + al;
     IF ar = al THEN
       mid := {(x MOD 32) .. ((x+w-1) MOD 32)};
-      FOR a1 := al TO al + (h-1)*128 BY 128 DO
+      a1 := al;
+      FOR i := 1 TO h DO
         SYSTEM.GET(a1, pix); SYSTEM.GET(pta0, ptw); SYSTEM.PUT(a1, (pix - mid) + (pix/ptw * mid)); INC(pta0, 4);
-        IF pta0 = pta1 THEN pta0 := patadr+4 END
+        IF pta0 = pta1 THEN pta0 := patadr+4 END;
+        INC(a1, Span);
       END
-    ELSIF ar > al THEN
+    ELSE
       left := {(x MOD 32) .. 31}; right := {0 .. ((x+w-1) MOD 32)};
-      FOR a0 := al TO al + (h-1)*128 BY 128 DO
+      a0 := al;
+      FOR i := 1 TO h DO
         SYSTEM.GET(a0, pixl); SYSTEM.GET(pta0, ptw); SYSTEM.PUT(a0, (pixl - left) + (pixl/ptw * left));
         FOR a1 := a0+4 TO ar-4 BY 4 DO SYSTEM.GET(a1, pix); SYSTEM.PUT(a1, pix/ptw) END ;
         SYSTEM.GET(ar, pixr); SYSTEM.PUT(ar, (pixr - right) + (pixr/ptw * right));
-        INC(pta0, 4); INC(ar, 128);
-        IF pta0 = pta1 THEN pta0 := patadr+4 END
+        INC(pta0, 4); INC(ar, Span);
+        IF pta0 = pta1 THEN pta0 := patadr+4 END;
+        INC(a0, Span)
       END
     END
   END ReplPattern;
-
 
   PROCEDURE InitResolution;
   VAR magic: INTEGER;
@@ -329,9 +243,10 @@ MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / AP 9.3.20 Extended Oberon*)
     ELSIF magic = 53697A67H THEN
       SYSTEM.GET(Base + 4, Width);
       SYSTEM.GET(Base + 8, Height);
-      SYSTEM.GET(Base + 12, Base);
-      Depth:=1;
-      Span := Width DIV 8;
+      SYSTEM.GET(Base + 12, Depth);
+      Span := Depth * Width DIV 8;
+      Pack := 32 DIV Depth;
+      white := 255;
     ELSE
       Width := 1024; Height := 768; Span := 128; Depth := 1
     END;
@@ -339,8 +254,7 @@ MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / AP 9.3.20 Extended Oberon*)
     fgcolor := white;
   END InitResolution;
 
-BEGIN Base:=0E7F00H; InitResolution;
-(* BEGIN Base := base; Width := 1024; Height := 768; *)
+BEGIN SYSTEM.GET(12,Base); INC(Base,16); InitResolution;
   arrow := SYSTEM.ADR($0F0F 0060 0070 0038 001C 000E 0007 8003 C101 E300 7700 3F00 1F00 3F00 7F00 FF00$);
   star := SYSTEM.ADR($0F0F 8000 8220 8410 8808 9004 A002 C001 7F7F C001 A002 9004 8808 8410 8220 8000$);
   hook := SYSTEM.ADR($0C0C 070F 8707 C703 E701 F700 7F00 3F00 1F00 0F00 0700 0300 01$);

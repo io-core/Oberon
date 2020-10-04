@@ -1,26 +1,24 @@
-MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015*)
-               (*MS 1.2019 adapted for Unicode*)
-
+MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 16.8.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Files, Modules, Input, Display, Viewers, Fonts, Texts;
 
   CONST (*message ids*)
     consume* = 0; track* = 1; defocus* = 0; neutralize* = 1; mark* = 2;
     off = 0; idle = 1; active = 2;   (*task states*)
     BasicCycle = 20;
-    ESC = 1BX; SETSTAR = 1AX;
+    TAB = Input.TAB; CR = Input.CR; ESC = Input.ESC; SETSTAR = 1AX;
 
   TYPE Painter* = PROCEDURE (x, y: INTEGER);
     Marker* = RECORD Fade*, Draw*: Painter END;
     
     Cursor* = RECORD
-        marker*: Marker; on*: BOOLEAN; X*, Y*: INTEGER
+       marker*: Marker; on*: BOOLEAN; X*, Y*: INTEGER
     END;
 
     InputMsg* = RECORD (Display.FrameMsg)
-      id*: INTEGER;
+      id*: INTEGER;                      (*consume, track*)
       keys*: SET;
       X*, Y*: INTEGER;
-      codepoint*: INTEGER;
+      ch*: CHAR;
       fnt*: Fonts.Font;
       col*, voff*: INTEGER
     END;
@@ -32,12 +30,12 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015*)
     END;
 
     ControlMsg* = RECORD (Display.FrameMsg)
-      id*, X*, Y*: INTEGER
+      id*, X*, Y*: INTEGER               (*defocus, neutralize, mark*)
     END;
 
     CopyMsg* = RECORD (Display.FrameMsg)
-      F*: Display.Frame
-    END;
+        F*: Display.Frame
+      END;
 
     Task* = POINTER TO TaskDesc;
 
@@ -50,16 +48,16 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015*)
     END;
 
   VAR User*: ARRAY 8 OF CHAR; Password*: LONGINT;
-    Arrow*, Star*: Marker;
-    Mouse, Pointer: Cursor;
-    FocusViewer*: Viewers.Viewer;
+    Arrow*, Star*: Marker; (*predefined markers representing an arrow pointing to the NW and a star symbol*)
+    Mouse, Pointer: Cursor; (*predefined cursors representing a mouse and a global system pointer*)
     Log*: Texts.Text;
 
     Par*: RECORD
       vwr*: Viewers.Viewer;
       frame*: Display.Frame;
       text*: Texts.Text;
-      pos*: LONGINT
+      pos*: LONGINT;
+      res*: INTEGER
     END;
 
     CurFnt*: Fonts.Font;
@@ -70,6 +68,8 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015*)
     DW, DH, CL: INTEGER;
     ActCnt: INTEGER; (*action count for GC*)
     Mod: Modules.Module;
+
+    W: Texts.Writer;
 
   (*user identification*)
 
@@ -101,7 +101,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015*)
   BEGIN RETURN Kernel.Time()
   END Time;
 
-  (*cursor handling*)
+  (*cursors handling*)
 
   PROCEDURE FlipArrow (X, Y: INTEGER);
   BEGIN
@@ -109,8 +109,8 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015*)
       IF X > DW - 15 THEN X := DW - 15 END
     ELSE
       IF X > CL + DW - 15 THEN X := CL + DW - 15 END
-    END;
-    IF Y < 14 THEN Y := 14 ELSIF Y > DH THEN Y := DH END;
+    END ;
+    IF Y < 14 THEN Y := 14 ELSIF Y > DH THEN Y := DH END ;
     Display.CopyPattern(Display.white, Display.arrow, X, Y - 14, Display.invert)
   END FlipArrow;
      
@@ -121,7 +121,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015*)
     ELSE
       IF X < CL + 7 THEN X := CL + 7 ELSIF X > CL + DW - 8 THEN X := CL + DW - 8 END
     END ;
-    IF Y < 7 THEN Y := 7 ELSIF Y > DH - 8 THEN Y := DH - 8 END;
+    IF Y < 7 THEN Y := 7 ELSIF Y > DH - 8 THEN Y := DH - 8 END ;
     Display.CopyPattern(Display.white, Display.star, X - 7, Y - 7, Display.invert)
   END FlipStar;
 
@@ -151,52 +151,120 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015*)
   BEGIN DrawCursor(Mouse, Arrow, x, y)
   END DrawMouseArrow;
 
+  PROCEDURE DrawMouseStar* (x, y: INTEGER);
+  BEGIN DrawCursor(Mouse, Star, x, y)
+  END DrawMouseStar;
+
   PROCEDURE FadeMouse*;
   BEGIN FadeCursor(Mouse)
   END FadeMouse;
 
-  PROCEDURE DrawPointer*(x, y: INTEGER);
-  BEGIN DrawCursor(Pointer, Star, x, y)
+  PROCEDURE MouseOn*(): BOOLEAN;
+  BEGIN RETURN Mouse.on
+  END MouseOn;
+
+  PROCEDURE DrawPointer*(m: Marker; x, y: INTEGER);
+  BEGIN DrawCursor(Pointer, m, x, y)
   END DrawPointer;
 
-  (*display management*)
+  PROCEDURE DrawPointerArrow*(x, y: INTEGER);
+  BEGIN DrawCursor(Pointer, Arrow, x, y)
+  END DrawPointerArrow;
+
+  PROCEDURE DrawPointerStar*(x, y: INTEGER);
+  BEGIN DrawCursor(Pointer, Star, x, y)
+  END DrawPointerStar;
+
+  PROCEDURE FadePointer*;
+  BEGIN FadeCursor(Pointer)
+  END FadePointer;
+
+  PROCEDURE PointerOn*(): BOOLEAN;
+  BEGIN RETURN Pointer.on
+  END PointerOn;
 
   PROCEDURE RemoveMarks* (X, Y, W, H: INTEGER);
   BEGIN
     IF (Mouse.X > X - 16) & (Mouse.X < X + W + 16) & (Mouse.Y > Y - 16) & (Mouse.Y < Y + H + 16) THEN
       FadeCursor(Mouse)
-    END;
+    END ;
     IF (Pointer.X > X - 8) & (Pointer.X < X + W + 8) & (Pointer.Y > Y - 8) & (Pointer.Y < Y + H + 8) THEN
       FadeCursor(Pointer)
     END
   END RemoveMarks;
 
+  (*current looks*)
+
+  PROCEDURE SetFont* (fnt: Fonts.Font);
+  BEGIN CurFnt := fnt
+  END SetFont;
+
+  PROCEDURE SetColor* (col: INTEGER);
+  BEGIN CurCol := col
+  END SetColor;
+
+  PROCEDURE SetOffset* (voff: INTEGER);
+  BEGIN CurOff := voff
+  END SetOffset;
+
+  (*logs and text selections*)
+
+  PROCEDURE OpenLog* (T: Texts.Text);
+  BEGIN Log := T
+  END OpenLog;
+
+  PROCEDURE GetSelection* (VAR text: Texts.Text; VAR beg, end, time: LONGINT); (*from current display*)
+    VAR M: SelectionMsg;
+  BEGIN M.time := -1; Viewers.Broadcast(M); time := M.time;
+    IF time >= 0 THEN text := M.text; beg := M.beg; end := M.end END
+  END GetSelection;
+
+  (*display management*)
+
   PROCEDURE HandleFiller (V: Display.Frame; VAR M: Display.FrameMsg);
   BEGIN
     CASE M OF
-    InputMsg: IF M.id = track THEN DrawCursor(Mouse, Arrow, M.X, M.Y) END |
-    ControlMsg: IF M.id = mark THEN DrawCursor(Pointer, Star, M.X, M.Y) END |
+    InputMsg: IF M.id = track THEN DrawMouseArrow(M.X, M.Y) END |
+    ControlMsg: IF M.id = mark THEN DrawPointerStar(M.X, M.Y) END |
     Viewers.ViewerMsg:
       IF (M.id = Viewers.restore) & (V.W > 0) & (V.H > 0) THEN
         RemoveMarks(V.X, V.Y, V.W, V.H);
         Display.ReplConst(Display.black, V.X, V.Y, V.W, V.H, Display.replace)
-      ELSIF (M.id = Viewers.modify) & (M.Y < V.Y) THEN
-        RemoveMarks(V.X, M.Y, V.W, V.Y - M.Y);
-        Display.ReplConst(Display.black, V.X, M.Y, V.W, V.Y - M.Y, Display.replace)
+      ELSIF M.id = Viewers.modify THEN
+        IF M.Y < V.Y THEN
+          RemoveMarks(V.X, M.Y, V.W, V.Y - M.Y);
+          Display.ReplConst(Display.black, V.X, M.Y, V.W, V.Y - M.Y, Display.replace)
+        ELSIF M.Y > V.Y THEN RemoveMarks(V.X, V.Y, V.W, M.Y - V.Y)
+        END
       END
     END
   END HandleFiller;
 
-  PROCEDURE OpenDisplay* (UW, SW, H: INTEGER);
+  PROCEDURE InitTrack* (D: Viewers.DisplayArea; W, H: INTEGER); (*add new track to the right*)
     VAR Filler: Viewers.Viewer;
-  BEGIN
-     Input.SetMouseLimits(Viewers.curW + UW + SW, H);
-     Display.ReplConst(Display.black, Viewers.curW, 0, UW + SW, H, Display.replace);
-     NEW(Filler); Filler.handle := HandleFiller;
-     Viewers.InitTrack(UW, H, Filler); (*init user track*)
-     NEW(Filler); Filler.handle := HandleFiller;
-     Viewers.InitTrack(SW, H, Filler) (*init system track*)
-  END OpenDisplay;
+  BEGIN NEW(Filler); Filler.handle := HandleFiller; Viewers.InitTrack(D, W, H, Filler)
+  END InitTrack;
+
+  PROCEDURE OpenTrack* (D: Viewers.DisplayArea; X, W: INTEGER); (*create overlay track at X*)
+    VAR Filler: Viewers.Viewer;
+  BEGIN NEW(Filler); Filler.handle := HandleFiller; Viewers.OpenTrack(D, X, W, Filler)
+  END OpenTrack;
+
+  PROCEDURE InitDisplay* (D: Viewers.DisplayArea; name: ARRAY OF CHAR);
+  BEGIN Viewers.InitDisplay(D, DW, DH, name);
+    InitTrack(D, DW DIV 8 * 5, DH);
+    InitTrack(D, DW DIV 8 * 3, DH)
+  END InitDisplay;
+
+  PROCEDURE SetDisplay* (D: Viewers.DisplayArea);
+  BEGIN Viewers.SetDisplay(D); Input.SetMouseLimits(D.curW, D.H)
+  END SetDisplay;
+
+  PROCEDURE CloseDisplay* (D: Viewers.DisplayArea; hint: INTEGER);
+    VAR prev: Viewers.DisplayArea;
+  BEGIN prev := Viewers.CurDisplay; Viewers.CloseDisplay(D, hint);
+    IF Viewers.CurDisplay # prev THEN Input.SetMouseLimits(Viewers.CurDisplay.curW, Viewers.CurDisplay.H) END
+  END CloseDisplay;
 
   PROCEDURE DisplayWidth* (X: INTEGER): INTEGER;
   BEGIN RETURN DW
@@ -206,12 +274,24 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015*)
   BEGIN RETURN DH
   END DisplayHeight;
 
-  PROCEDURE OpenTrack* (X, W: INTEGER);
-    VAR Filler: Viewers.Viewer;
+  PROCEDURE MarkedViewer* (): Viewers.Viewer;
+  BEGIN RETURN Viewers.This(Pointer.X, Pointer.Y)
+  END MarkedViewer;
+
+  PROCEDURE PassFocus* (V: Viewers.Viewer);
+    VAR M: ControlMsg;
   BEGIN
-    NEW(Filler); Filler.handle := HandleFiller;
-    Viewers.OpenTrack(X, W, Filler)
-  END OpenTrack;
+    IF Viewers.FocusViewer # NIL  THEN
+      M.id := defocus; Viewers.FocusViewer.handle(Viewers.FocusViewer, M)
+    END ;
+    Viewers.SetFocus(Viewers.ThisDisplay(V), V)
+  END PassFocus;
+
+  PROCEDURE FocusViewer(): Viewers.Viewer;
+  BEGIN RETURN Viewers.FocusViewer
+  END FocusViewer;
+
+  (*standard Oberon display with user track and system track, and filler viewer*)
 
   PROCEDURE UserTrack* (X: INTEGER): INTEGER;
   BEGIN RETURN X DIV DW * DW
@@ -222,89 +302,119 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015*)
   END SystemTrack;
 
   PROCEDURE UY (X: INTEGER): INTEGER;
-    VAR h: INTEGER;
-      fil, bot, alt, max: Display.Frame;
-  BEGIN
-    Viewers.Locate(X, 0, fil, bot, alt, max);
-    IF fil.H >= DH DIV 8 THEN h := DH ELSE h := max.Y + max.H DIV 2 END ;
-    RETURN h
+    VAR y: INTEGER;
+      fil, top, bot, alt, max: Display.Frame;
+  BEGIN Viewers.Locate(Viewers.CurDisplay, X, 0, fil, top, bot, alt, max);
+    IF fil.H >= DH DIV 8 THEN y := DH ELSE y := max.Y + max.H DIV 2 END ;
+    RETURN y
   END UY;
 
   PROCEDURE AllocateUserViewer* (DX: INTEGER; VAR X, Y: INTEGER);
   BEGIN
-    IF Pointer.on THEN X := Pointer.X; Y := Pointer.Y
+    IF PointerOn() THEN X := Pointer.X; Y := Pointer.Y
     ELSE X := DX DIV DW * DW; Y := UY(X)
     END
   END AllocateUserViewer;
 
   PROCEDURE SY (X: INTEGER): INTEGER;
     VAR H0, H1, H2, H3, y: INTEGER;
-      fil, bot, alt, max: Display.Frame;
-  BEGIN H3 := DH - DH DIV 3;
-    H2 := H3 - H3 DIV 2; H1 := DH DIV 5; H0 := DH DIV 10;
-    Viewers.Locate(X, DH, fil, bot, alt, max);
+      fil, top, bot, alt, max: Display.Frame;
+  BEGIN H3 := DH - DH DIV 3; H2 := H3 - H3 DIV 2; H1 := DH DIV 5; H0 := DH DIV 10;
+    Viewers.Locate(Viewers.CurDisplay, X, DH, fil, top, bot, alt, max);
     IF fil.H >= DH DIV 8 THEN y := DH
     ELSIF max.H >= DH - H0 THEN y := max.Y + H3
     ELSIF max.H >= H3 - H0 THEN y := max.Y + H2
     ELSIF max.H >= H2 - H0 THEN y := max.Y + H1
-    ELSIF max # bot THEN y := max.Y + max.H DIV 2
-    ELSIF bot.H >= H1 THEN y := bot.H DIV 2
-    ELSE y := alt.Y + alt.H DIV 2
+    ELSE y := max.Y + max.H DIV 2
     END ;
     RETURN y
   END SY;
 
   PROCEDURE AllocateSystemViewer* (DX: INTEGER; VAR X, Y: INTEGER);
   BEGIN
-    IF Pointer.on THEN X := Pointer.X; Y := Pointer.Y
+    IF PointerOn() THEN X := Pointer.X; Y := Pointer.Y
     ELSE X := DX DIV DW * DW + DW DIV 8 * 5; Y := SY(X)
     END
   END AllocateSystemViewer;
 
-  PROCEDURE MarkedViewer* (): Viewers.Viewer;
-  BEGIN RETURN Viewers.This(Pointer.X, Pointer.Y)
-  END MarkedViewer;
-
-  PROCEDURE PassFocus* (V: Viewers.Viewer);
-    VAR M: ControlMsg;
-  BEGIN M.id := defocus; FocusViewer.handle(FocusViewer, M); FocusViewer := V
-  END PassFocus;
-
-  PROCEDURE OpenLog*(T: Texts.Text);
-  BEGIN Log := T
-  END OpenLog;
-
   (*command interpretation*)
-  PROCEDURE SetPar*(F: Display.Frame; T: Texts.Text; pos: LONGINT);
-  BEGIN Par.vwr := Viewers.This(F.X, F.Y); Par.frame := F; Par.text := T; Par.pos := pos
+
+  PROCEDURE SetPar*(F: Display.Frame; T: Texts.Text; pos: LONGINT; res: INTEGER);
+  BEGIN Par.vwr := Viewers.This(F.X, F.Y); Par.frame := F; Par.text := T; Par.pos := pos; Par.res := res
   END SetPar;
 
-  PROCEDURE Call* (name: ARRAY OF CHAR; VAR res: INTEGER);
-    VAR mod: Modules.Module; P: Modules.Command;
-      i, j: INTEGER; ch: CHAR;
-      Mname, Cname: ARRAY 32 OF CHAR;
-  BEGIN i := 0; ch := name[0];
-    WHILE (ch # ".") & (ch # 0X) DO Mname[i] := ch; INC(i); ch := name[i] END ;
-    IF ch = "." THEN
-      Mname[i] := 0X; INC(i);
-      Modules.Load(Mname, mod); res := Modules.res;
-      IF Modules.res = 0 THEN
-        j := 0; ch := name[i]; INC(i);
-        WHILE ch # 0X DO Cname[j] := ch; INC(j); ch := name[i]; INC(i) END ;
-        Cname[j] := 0X;
-        P := Modules.ThisCommand(mod, Cname); res := Modules.res;
-        IF Modules.res = 0 THEN P END
+  PROCEDURE ClearPar*;
+  BEGIN Par.vwr := NIL; Par.frame := NIL; Par.text := NIL; Par.pos := 0; Par.res := 0
+  END ClearPar;
+
+  PROCEDURE Return*(n: INTEGER);
+  BEGIN Par.res := n
+  END Return;
+
+  PROCEDURE Skip(VAR S: Texts.Scanner; VAR len: INTEGER);  (*count and skip white spaces*)
+    VAR ch: CHAR; i: INTEGER;
+  BEGIN Texts.Read(S, ch); i := 0;
+    WHILE (ch = " ") OR (ch = TAB) OR (ch = CR) DO
+      IF ch = CR THEN INC(S.line) END ;
+      Texts.Read(S, ch); INC(i)
+    END ;
+    S.nextCh := ch; len := i
+  END Skip;
+
+  PROCEDURE Scan(VAR S: Texts.Scanner);
+    VAR ch: CHAR; i: INTEGER;
+  BEGIN ch := S.nextCh; i := 0;
+    IF ("A" <= ch) & (ch <= "Z") OR ("a" <= ch) & (ch <= "z") OR (ch = "*") OR ("0" <= ch) & (ch <= "9") THEN (*command*)
+      REPEAT S.s[i] := ch; INC(i); Texts.Read(S, ch)
+      UNTIL ((ch < "0") & (ch # ".") & (ch # "*") OR ("9" < ch) & (ch < "A") OR ("Z" < ch) & (ch < "a") OR ("z" < ch)) OR (i = 31);
+      S.s[i] := 0X; S.len := i; S.class := Texts.Name
+    ELSE S.class := Texts.Inval
+    END ;
+    S.nextCh := ch
+  END Scan;
+
+  PROCEDURE Call*(F: Display.Frame; T: Texts.Text; pos: LONGINT; new: BOOLEAN);
+    VAR S: Texts.Scanner; res, len: INTEGER;
+  BEGIN Texts.OpenScanner(S, T, pos); Skip(S, len); Scan(S);
+    IF (S.class = Texts.Name) & (S.line = 0) THEN
+      SetPar(F, T, pos + len + S.len, 0); Modules.Call(S.s, res);
+      IF (res > Modules.noerr) & (res < Modules.clients) & (Log # NIL) THEN Texts.WriteString(W, "Call error: ");
+        CASE res OF
+           Modules.nofile: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " module not found")
+         | Modules.badversion: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " bad version")
+         | Modules.badkey: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " imports ");
+             Texts.WriteString(W, Modules.imported); Texts.WriteString(W, " with bad key")
+         | Modules.badfile: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " corrupted obj file")
+         | Modules.nospace: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " insufficient space")
+         | Modules.nocmd: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " command not found")
+         | Modules.badcmd: Texts.WriteString(W, S.s); Texts.WriteString(W, " invalid command")
+         | Modules.nomod: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " module not found")
+        END ;
+        Par.res := res; Texts.WriteLn(W); Texts.Append(Log, W.buf)
       END
-    ELSE res := 5
     END
   END Call;
 
-  PROCEDURE GetSelection* (VAR text: Texts.Text; VAR beg, end, time: LONGINT);
-    VAR M: SelectionMsg;
-  BEGIN
-    M.time := -1; Viewers.Broadcast(M); time := M.time;
-    IF time >= 0 THEN text := M.text; beg := M.beg; end := M.end END
-  END GetSelection;
+  PROCEDURE Run*(F: Display.Frame; T: Texts.Text; pos: LONGINT);  (*execute multiple commands separated by ~*)
+    VAR S: Texts.Scanner; len: LONGINT; continue: BOOLEAN; 
+  BEGIN continue := pos >= 0;
+    WHILE continue DO
+      Texts.OpenScanner(S, T, pos); Skip(S, len); Scan(S); continue := FALSE;
+      IF S.class = Texts.Name THEN S.line := 0;
+        Call(F, T, pos + len, FALSE);
+        IF Par.res = 0 THEN
+          REPEAT Texts.Scan(S) UNTIL S.eot OR (S.class = Texts.Char) & (S.c = "~");
+          IF ~S.eot THEN pos := Texts.Pos(S); continue := TRUE END
+        END
+      END
+    END
+  END Run;
+
+  PROCEDURE Batch*;
+  BEGIN Run(Par.frame, Par.text, Par.pos)
+  END Batch;
+
+  (*task management*)
 
   PROCEDURE GC;
     VAR mod: Modules.Module;
@@ -317,7 +427,8 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015*)
       END ;
       LED(23H);
       Files.RestoreList; LED(27H);
-      Kernel.Scan; LED(20H);
+      Kernel.Collect; LED(20H);
+      Modules.Collect;
       ActCnt := BasicCycle
     END
   END GC;
@@ -347,31 +458,19 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015*)
   BEGIN ActCnt := count
   END Collect;
 
-  PROCEDURE SetFont* (fnt: Fonts.Font);
-  BEGIN CurFnt := fnt
-  END SetFont;
-
-  PROCEDURE SetColor* (col: INTEGER);
-  BEGIN CurCol := col
-  END SetColor;
-
-  PROCEDURE SetOffset* (voff: INTEGER);
-  BEGIN CurOff := voff
-  END SetOffset;
-
   PROCEDURE Loop*;
     VAR V: Viewers.Viewer; M: InputMsg; N: ControlMsg;
-       prevX, prevY, X, Y, t, codepoint: INTEGER; keys: SET;
+      prevX, prevY, X, Y, t: INTEGER; keys: SET; ch: CHAR;
   BEGIN
     REPEAT
       Input.Mouse(keys, X, Y);
-      IF Input.Available() > 0 THEN Input.ReadUnicode(codepoint);
-        IF codepoint = ORD(ESC) THEN
-          N.id := neutralize; Viewers.Broadcast(N); FadeCursor(Pointer); LED(0)
-        ELSIF codepoint = ORD(SETSTAR) THEN
+      IF Input.Available() > 0 THEN Input.Read(ch);
+        IF ch = ESC THEN
+          N.id := neutralize; Viewers.Broadcast(N); FadePointer; LED(0)
+        ELSIF ch = SETSTAR THEN
           N.id := mark; N.X := X; N.Y := Y; V := Viewers.This(X, Y); V.handle(V, N)
-        ELSE M.id := consume; M.codepoint := codepoint; M.fnt := CurFnt; M.col := CurCol; M.voff := CurOff;
-          FocusViewer.handle(FocusViewer, M); DEC(ActCnt)
+        ELSE M.id := consume; M.ch := ch; M.fnt := CurFnt; M.col := CurCol; M.voff := CurOff;
+          V := Viewers.FocusViewer; V.handle(V, M); DEC(ActCnt)
         END
       ELSIF keys # {} THEN
         M.id := track; M.X := X; M.Y := Y; M.keys := keys;
@@ -379,11 +478,11 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015*)
         UNTIL M.keys = {};
         DEC(ActCnt)
       ELSE
-        IF (X # prevX) OR (Y # prevY) OR ~Mouse.on THEN
-          M.id := track; M.X := X; 
-          IF Y >= Display.Height THEN Y := Display.Height END ;
+        IF (X # prevX) OR (Y # prevY) OR ~MouseOn() THEN
+          M.id := track; M.X := X;
+          IF Y >= DH THEN Y := DH END ;
           M.Y := Y; M.keys := keys; V := Viewers.This(X, Y); V.handle(V, M); prevX := X; prevY := Y
-        END;
+        END ;
         CurTask := CurTask.next; t := Kernel.Time();
         IF t >= CurTask.nextTime THEN
           CurTask.nextTime := t + CurTask.period; CurTask.state := active; CurTask.handle; CurTask.state := idle
@@ -404,10 +503,12 @@ BEGIN User[0] := 0X;
   OpenCursor(Mouse); OpenCursor(Pointer);
 
   DW := Display.Width; DH := Display.Height; CL := DW;
-  OpenDisplay(DW DIV 8 * 5, DW DIV 8 * 3, DH);
-  FocusViewer := Viewers.This(0, 0);
   CurFnt := Fonts.Default; CurCol := Display.white; CurOff := 0;
 
   ActCnt := 0; CurTask := NewTask(GC, 1000); Install(CurTask);
-  Modules.Load("System", Mod); Mod := NIL; Loop
+  Texts.OpenWriter(W); Log := NIL;
+
+  IF Modules.importing = "Oberon" THEN (*loaded by the regular loader*)
+    Modules.Load("System", Mod); Mod := NIL; Loop
+  END
 END Oberon.
