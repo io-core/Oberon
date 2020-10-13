@@ -1,3 +1,10 @@
+(* begin-module-description
+Module Display implements the drawing primitives for the frame buffer device in Oberon.
+
+Display uses SYSTEM
+
+
+end-module-description *)
 MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / AP 9.3.20 Extended Oberon*)
   IMPORT SYSTEM;
 
