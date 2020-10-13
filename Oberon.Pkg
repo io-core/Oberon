@@ -2,6 +2,7 @@ k,v1,v2
 package,Oberon,v5.1.0
 from,github.com/io-core,whenever
 license,PROJECTOBERON,NW JG PDR MS CP
+doc,core,implements the user-interface and task loop of the system.
 r,[io-core]/Edit,v5.1.0
 r,[core]/Kernel,v5.0.0
 r,[core]/Files,v5.0.0
