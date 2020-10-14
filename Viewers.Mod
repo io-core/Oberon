@@ -1,10 +1,10 @@
-(* begin-module-description
+(* begin-module-use-description
 Module Viewers implements base functionaltiy which may be extended for interacting with a pane or 'Viewer' in Oberon.
 
 Viewers uses Display
 
 
-end-module-description *)
+end-module-use-description *)
 MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 13.2.20 Extended Oberon*)
   IMPORT Display;
 
