@@ -1,10 +1,20 @@
 (* begin-module-use-description
 Module Display implements the drawing primitives for the frame buffer device in Oberon.
 
-Display uses SYSTEM
-
 
 end-module-use-description *)
+(* begin-module-develop-description
+
+(NW 5.11.2013 / 17.1.2019 / AP 9.3.20 Extended Oberon / CP 10.20 Integrated Oberon)
+
+**Display** is the interface to the hardware framebuffer in Oberon.
+
+On initialization the origial base address is queried for a magic value to determine
+if the base has moved and if the resolution is something other than 1024x768.
+
+Only monochrome screens are implemented in this version of Display.Mod
+
+end-module-develop-description *)
 MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / AP 9.3.20 Extended Oberon*)
   IMPORT SYSTEM;
 
@@ -24,13 +34,25 @@ MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / AP 9.3.20 Extended Oberon*)
     arrow*, star*, hook*, updown*, block*, cross*, grey*: INTEGER;
     (*a pattern is an array of bytes; the first is its width (< 32), the second its height, the rest the raster*)
 
+  (* begin-procedure-description
+---
+**Handle** passes through messages to the frame message handler.
+  end-procedure-description *)
   PROCEDURE Handle*(F: Frame; VAR M: FrameMsg);
   BEGIN
     IF (F # NIL) & (F.handle # NIL) THEN F.handle(F, M) END
   END Handle;
 
+  (* begin-section-description
+## ---------- Raster Ops
+  end-section-description *)
+
   (* raster ops *)
 
+  (* begin-procedure-description
+---
+**Dot** sets a pixel.
+  end-procedure-description *)
   PROCEDURE Dot*(col, x, y, mode: INTEGER);
     VAR a, v, b: INTEGER; u, s: SET;
   BEGIN a := Base + (x DIV Pack)*4 + y*Span;
@@ -47,6 +69,10 @@ MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / AP 9.3.20 Extended Oberon*)
     END
   END Dot;
 
+  (* begin-procedure-description
+---
+**ReplConst** paints or inverts a rectangular region of the display.
+  end-procedure-description *)
   PROCEDURE ReplConst*(col, x, y, w, h, mode: INTEGER);
     VAR al, ar, a0, a1, i: INTEGER; left, right, mid, pix, pixl, pixr: SET;
   BEGIN
@@ -118,6 +144,10 @@ MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / AP 9.3.20 Extended Oberon*)
   END CopyPatternClipped;
 *)
 
+  (* begin-procedure-description
+---
+**CopyPatternClipped** copies a bitmap pattern (e.g. icon, font glyph) to a clipped location on the display.
+  end-procedure-description *)
   PROCEDURE CopyPatternClipped*(col, patadr, x, y, left, right, top, bot, mode: INTEGER);  (*only for modes = paint, invert*)
     VAR a0, pwd, i, j: INTEGER;
       w, h, pbt: BYTE; b0,pix: SET;
@@ -165,6 +195,10 @@ MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / AP 9.3.20 Extended Oberon*)
     END
   END CopyPatternClipped;
 
+  (* begin-procedure-description
+---
+**CopyPattern** calls CopyPatternClipped with a relaxed clipping boundary.
+  end-procedure-description *)
   PROCEDURE CopyPattern*(col, patadr, x, y, mode: INTEGER);  (*only for modes = paint, invert*)
   BEGIN CopyPatternClipped(col, patadr, x, y, 0, 0, 0, 0, mode)
   END CopyPattern;
@@ -227,6 +261,10 @@ MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / AP 9.3.20 Extended Oberon*)
   END CopyBlock;
 *)
 
+  (* begin-procedure-description
+---
+**CopyImage** copies one rectangular portion of the display area to another portion of the display area. 
+  end-procedure-description *)
   PROCEDURE CopyImage*(sx, sy, sw, sh, sdepth, sspan, dx, dy, ddepth, dspan, mode: INTEGER); (*only for mode = replace*)
     VAR sa, da, sa0, sa1, d, len: INTEGER;
       u0, u1, u2, u3, v0, v1, v2, v3, n: INTEGER;
@@ -283,11 +321,19 @@ MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / AP 9.3.20 Extended Oberon*)
     END
   END CopyImage;
 
+  (* begin-procedure-description
+---
+**CopyBlock** calls CopyImage with the current screen Depth and Span. 
+  end-procedure-description *)
   PROCEDURE CopyBlock*(sx, sy, w, h, dx, dy, mode: INTEGER);
   BEGIN
     CopyImage(sx, sy, w, h, Depth, Span, dx, dy, Depth, Span, mode)
   END CopyBlock;
 
+  (* begin-procedure-description
+---
+**ReplPattern** repeats a pixel pattern (e.g. icon, font glyph) over a rectangular portion of the display. 
+  end-procedure-description *)
   PROCEDURE ReplPattern*(col, patadr, x, y, w, h, mode: INTEGER);
   (* pattern width = 32, fixed; pattern starts at patadr+4, for mode = invert only *)
     VAR al, ar, a0, a1: INTEGER;
@@ -315,7 +361,16 @@ MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / AP 9.3.20 Extended Oberon*)
     END
   END ReplPattern;
 
+  (* begin-section-description
+## ---------- Initialization
+  end-section-description *)
 
+
+  (* begin-procedure-description
+---
+**InitResolution** queries the start of the framebuffer memory to determine if the acutal 
+framebuffer has moved and if it is other than 1024x768x1
+  end-procedure-description *)
   PROCEDURE InitResolution;
   VAR magic: INTEGER;
   BEGIN
@@ -346,6 +401,11 @@ MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / AP 9.3.20 Extended Oberon*)
     fgcolor := white;
   END InitResolution;
 
+  (* begin-procedure-description
+---
+**The initialziation code for this module** calls the InitResolution procedure 
+and then defines the arrow, star, hook, updown, and icons and the grey pattern. 
+  end-procedure-description *)
 BEGIN Base:=0E7F00H; InitResolution;
 (* BEGIN Base := base; Width := 1024; Height := 768; *)
   arrow := SYSTEM.ADR($0F0F 0060 0070 0038 001C 000E 0007 8003 C101 E300 7700 3F00 1F00 3F00 7F00 FF00$);
