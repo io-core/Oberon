@@ -508,5 +508,10 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 13.2.20 Extended Oberon*)
     END
   END CloseDisplay;
 
+  (* begin-procedure-description
+---
+**The initialzation code for this module** merely sets the `root`, `CurDisplay` and `FocusViewer` module variables to `NIL` and the `nextID` module variable to `0`.
+
+  end-procedure-description *)
 BEGIN root := NIL; CurDisplay := NIL; FocusViewer := NIL; nextId := 0
 END Viewers.
