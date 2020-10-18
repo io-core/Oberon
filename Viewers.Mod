@@ -1,17 +1,29 @@
 (* begin-module-use-description
 Module Viewers implements base functionaltiy which may be extended for interacting with a pane or 'Viewer' in Oberon.
 
-Viewers uses Display
-
-
 end-module-use-description *)
+(* begin-module-develop-description
+
+(JG 14.9.90 / NW 15.9.13 / AP 13.2.20 Extended Oberon)
+
+**Viewers** introduces the core functionality for graphical interaction in Oberon.
+
+Viewers operate on Frames, which are the arrangeable components of User interaction in Oberon.
+
+Viewers coordinate via messages. Extensions of `Viewer` will extend `ViewerMsg` for corresponding functionaltiy.
+
+Extensions of `Viewer` inherit the basic UI functionaltiy declared in this module, including the creation, expansion, closure, focus tracking, etc. of viewers.
+
+end-module-develop-description *)
 MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 13.2.20 Extended Oberon*)
   IMPORT Display;
 
-  CONST restore* = 0; modify* = 1; suspend* = 2; (*message ids*)
+  CONST 
+    restore* = 0; modify* = 1; suspend* = 2; (*message ids*)
     inf = 65535; DnLength* = 32;
 
-  TYPE Viewer* = POINTER TO ViewerDesc;
+  TYPE 
+    Viewer* = POINTER TO ViewerDesc;
     ViewerDesc* = RECORD (Display.FrameDesc) prev, parent: Viewer;
       minH*, state*: INTEGER
     END;
@@ -35,10 +47,19 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 13.2.20 Extended Oberon*)
       backup: Viewer (*last closed viewer*)
     END;
 
-  VAR CurDisplay*, root*: DisplayArea;
+  VAR 
+    CurDisplay*, root*: DisplayArea;
     FocusViewer*: Viewer;
     nextId: INTEGER;
 
+  (* begin-section-description
+## ---------- Oberon Message Handling
+  end-section-description *)
+
+  (* begin-procedure-description
+---
+**ThisViewer** finds the viewer containing the point represented by D, X, and Y.
+  end-procedure-description *)
   PROCEDURE ThisViewer* (D: DisplayArea; X, Y: INTEGER): Viewer;
     VAR T, V: Display.Frame;
   BEGIN
@@ -52,6 +73,10 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 13.2.20 Extended Oberon*)
     RETURN V(Viewer)
   END ThisViewer;
 
+  (* begin-procedure-description
+---
+**This** passes the current display to ThisViewer to locate the viewer that contains a point.
+  end-procedure-description *)
   PROCEDURE This* (X, Y: INTEGER): Viewer;  (*for backward compatibility*)
     VAR V: Viewer;
   BEGIN
@@ -59,36 +84,64 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 13.2.20 Extended Oberon*)
     RETURN V
   END This;
 
+  (* begin-procedure-description
+---
+**ThisDisplay** finds the DisplayArea of a Viewer.
+  end-procedure-description *)
   PROCEDURE ThisDisplay* (V: Viewer): DisplayArea;
   BEGIN
     WHILE (V # NIL) & (V.parent # NIL) (*~display*) DO V := V.parent END;
     RETURN V(DisplayArea)
   END ThisDisplay;
 
+  (* begin-procedure-description
+---
+**Next** cycles through the defined DisplayAreas 
+  end-procedure-description *)
   PROCEDURE Next* (V: Viewer): Viewer;
   BEGIN
     IF (V IS DisplayArea) & (V.next = NIL) THEN V := root ELSE V := V.next(Viewer) END;
     RETURN V
   END Next;
 
+  (* begin-procedure-description
+---
+**Prev** cycles (backwards) through the defined DisplayAreas.
+  end-procedure-description *)
   PROCEDURE Prev* (V: Viewer): Viewer;
   BEGIN RETURN V.prev(Viewer)
   END Prev;
 
+  (* begin-procedure-description
+---
+**SetFocus** assigns the focus (`FocusViewer` global variable) to the `Viewer` parameter. 
+  end-procedure-description *)
   PROCEDURE SetFocus* (D: DisplayArea; V: Viewer);
   BEGIN D.focus := V;
     IF D = CurDisplay THEN FocusViewer := V END
   END SetFocus;
 
+  (* begin-procedure-description
+---
+**GetFocus** returns the Viewer in a DisplayArea that has the focus. 
+  end-procedure-description *)
   PROCEDURE GetFocus* (D: DisplayArea): Viewer;
   BEGIN RETURN D.focus
   END GetFocus;
 
+  (* begin-procedure-description
+---
+**Adjust** sends a message to the Frame to handle the adjustment of its vertical position and extent.
+  end-procedure-description *)
   PROCEDURE Adjust* (F: Display.Frame; id, Y, H: INTEGER);
     VAR M: ViewerMsg;
   BEGIN M.id := id; M.Y := Y; M.H := H; F.handle(F, M); F.Y := Y; F.H := H
   END Adjust;
 
+  (* begin-procedure-description
+---
+**Open** prepares a new frame, adjusting other affected viewers via messages.
+  end-procedure-description *)
   PROCEDURE Open* (D: DisplayArea; V: Viewer; X, Y: INTEGER);
     VAR T, v: Display.Frame; M: ViewerMsg;
   BEGIN
@@ -112,6 +165,10 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 13.2.20 Extended Oberon*)
     END
   END Open;
 
+  (* begin-procedure-description
+---
+**Validate** ensures correct viewer state. 
+  end-procedure-description *)
   PROCEDURE Validate* (V: Viewer; VAR Y, H: INTEGER);
     VAR D: DisplayArea; v: Display.Frame; s: INTEGER;
   BEGIN
@@ -128,6 +185,10 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 13.2.20 Extended Oberon*)
     END
   END Validate;
 
+  (* begin-procedure-description
+---
+**Change** adjusts a viewer. 
+  end-procedure-description *)
   PROCEDURE Change* (V: Viewer; Y, H: INTEGER);
     CONST none = 0; self = 1; above = 2; below = 3;
     VAR v: Viewer; i, y, dY: INTEGER; m: ARRAY 3 OF INTEGER; up, down: BOOLEAN;
@@ -167,6 +228,10 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 13.2.20 Extended Oberon*)
     END
   END Change;
 
+  (* begin-procedure-description
+---
+**Spread** redistributes viewers vertically. 
+  end-procedure-description *)
   PROCEDURE Spread* (D: DisplayArea; X, W: INTEGER); (*redistribute viewers vertically*)
     VAR T, t, v, fil: Display.Frame; M: ViewerMsg; Y, H: INTEGER;
   BEGIN
@@ -189,6 +254,10 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 13.2.20 Extended Oberon*)
     END
   END Spread;
 
+  (* begin-procedure-description
+---
+**RestoreTrack** returns a track to its previous arrangement. 
+  end-procedure-description *)
   PROCEDURE RestoreTrack (S: Display.Frame);
     VAR T, t, v: Display.Frame; M: ViewerMsg;
   BEGIN t := S(Viewer).prev; T := S(Track).under;
@@ -201,6 +270,10 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 13.2.20 Extended Oberon*)
     UNTIL t = T
   END RestoreTrack;
 
+  (* begin-procedure-description
+---
+**Close** removes a viewer from a track.
+  end-procedure-description *)
   PROCEDURE Close* (V: Viewer);
     VAR D: DisplayArea; T, U: Display.Frame; M: ViewerMsg;
   BEGIN
@@ -221,14 +294,26 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 13.2.20 Extended Oberon*)
     END
   END Close;
 
+  (* begin-procedure-description
+---
+**Recall** brings back the last closed viewer.
+  end-procedure-description *)
   PROCEDURE Recall* (D: DisplayArea; VAR V: Viewer); (*last closed viewer*)
   BEGIN V := D.backup
   END Recall;
 
+  (* begin-procedure-description
+---
+**Flush** permanently removes the last closed viewer. 
+  end-procedure-description *)
   PROCEDURE Flush* (D: DisplayArea); (*last closed viewer*)
   BEGIN D.backup := NIL
   END Flush;
 
+  (* begin-procedure-description
+---
+**Locate** determines the context of a viewer
+  end-procedure-description *)
   PROCEDURE Locate* (D: DisplayArea; X, H: INTEGER; VAR fil, top, bot, alt, max: Display.Frame);
     VAR T, V: Display.Frame;
   BEGIN
@@ -252,6 +337,10 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 13.2.20 Extended Oberon*)
     END
   END Locate;
 
+  (* begin-procedure-description
+---
+**Install** places frame F as a subframe into parent frame
+  end-procedure-description *)
   PROCEDURE Install* (parent, F: Display.Frame); (*frame F as a subframe into parent frame*)
     VAR f: Display.Frame;
   BEGIN F.next := NIL;
@@ -262,6 +351,10 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 13.2.20 Extended Oberon*)
     END
   END Install;
 
+  (* begin-procedure-description
+---
+**Remove** takes subframe F from its parent frame
+  end-procedure-description *)
   PROCEDURE Remove* (parent, F: Display.Frame); (*subframe F from its parent frame*)
     VAR f, f0: Display.Frame;
   BEGIN
@@ -272,11 +365,19 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 13.2.20 Extended Oberon*)
     END
   END Remove;
 
+  (* begin-procedure-description
+---
+**InitFiller** initializes filler values.
+  end-procedure-description *)
   PROCEDURE InitFiller (X, Y, W, H, minH: INTEGER; Filler: Viewer); (*except fields handle, parent, dsc*)
   BEGIN Filler.X := X; Filler.Y := Y; Filler.W := W; Filler.H := H; Filler.minH := minH;
     Filler.state := 1; Filler.next := Filler; Filler.prev := Filler
   END InitFiller;
 
+  (* begin-procedure-description
+---
+**InitTrack** initializes a track.
+  end-procedure-description *)
   PROCEDURE InitTrack* (D: DisplayArea; W, H: INTEGER; Filler: Viewer);
     VAR T, fillerTrack: Track; fillerViewer: Viewer;
   BEGIN InitFiller(D.curW, 0, W, H, 0, Filler); Filler.dsc := NIL;
@@ -289,6 +390,10 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 13.2.20 Extended Oberon*)
     D.curW := D.curW + W
   END InitTrack;
 
+  (* begin-procedure-description
+---
+**OpenTrack** opens a track. 
+  end-procedure-description *)
   PROCEDURE OpenTrack* (D: DisplayArea; X, W: INTEGER; Filler: Viewer);
     VAR newT: Track; S, T, t, v: Display.Frame; M: ViewerMsg; v0: Viewer;
   BEGIN
@@ -310,6 +415,10 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 13.2.20 Extended Oberon*)
     END
   END OpenTrack;
 
+  (* begin-procedure-description
+---
+**CloseTrack** closes a track. 
+  end-procedure-description *)
   PROCEDURE CloseTrack* (D: DisplayArea; X: INTEGER);
     VAR T, V: Display.Frame; M: ViewerMsg; hasFocus: BOOLEAN;
   BEGIN
@@ -327,6 +436,10 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 13.2.20 Extended Oberon*)
     END
   END CloseTrack;
 
+  (* begin-procedure-description
+---
+**Broadcast** sends a message to all viewers in the current display
+  end-procedure-description *)
   PROCEDURE Broadcast* (VAR M: Display.FrameMsg); (*to current display*)
     VAR T, V: Display.Frame;
   BEGIN
@@ -340,6 +453,10 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 13.2.20 Extended Oberon*)
     END
   END Broadcast;
 
+  (* begin-procedure-description
+---
+**InitDisplay** prepares a display for use. 
+  end-procedure-description *)
   PROCEDURE InitDisplay* (D: DisplayArea; W, H: INTEGER; name: ARRAY OF CHAR);
     VAR fillerTrack: Track; fillerViewer: Viewer;
   BEGIN D.id := nextId;
@@ -352,6 +469,10 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 13.2.20 Extended Oberon*)
     root.prev := D; D.next := NIL; nextId := nextId + 1
   END InitDisplay;
 
+  (* begin-procedure-description
+---
+**SetDisplay** suspends the current display via a broadcast message and activates the chosen display via another broadcast message.
+  end-procedure-description *)
   PROCEDURE SetDisplay* (D: DisplayArea);
     VAR M: ViewerMsg;
   BEGIN
@@ -359,6 +480,10 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 13.2.20 Extended Oberon*)
     CurDisplay := D; D.state := 2; SetFocus(D, ThisViewer(D, 0, 0)); M.id := restore; Broadcast(M)
   END SetDisplay;
 
+  (* begin-procedure-description
+---
+**GetDisplay** determines the current display.
+  end-procedure-description *)
   PROCEDURE GetDisplay* (id: INTEGER): DisplayArea;
     VAR D: DisplayArea;
   BEGIN D := root;
@@ -366,6 +491,10 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 13.2.20 Extended Oberon*)
     RETURN D
   END GetDisplay;
 
+  (* begin-procedure-description
+---
+**CloseDisplay** closes a display if it is not the last display.
+  end-procedure-description *)
   PROCEDURE CloseDisplay* (D: DisplayArea; hint: INTEGER); (*except last display*)
   BEGIN
     IF root.next # NIL THEN D.state := 0;
