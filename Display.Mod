@@ -1,6 +1,7 @@
 (* begin-module-use-description
 Module Display implements the drawing primitives for the frame buffer device in Oberon.
 
+A pattern is an array of bytes; the first is its width (< 32), the second its height, the rest the raster data.
 
 end-module-use-description *)
 (* begin-module-develop-description
@@ -14,6 +15,8 @@ if the base has moved and if the resolution is something other than 1024x768.
 
 Only monochrome screens are implemented in this version of Display.Mod
 
+A pattern is an array of bytes; the first is its width (< 32), the second its height, the rest the raster data.
+
 end-module-develop-description *)
 MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / AP 9.3.20 Extended Oberon*)
   IMPORT SYSTEM;
@@ -22,7 +25,8 @@ MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / AP 9.3.20 Extended Oberon*)
     replace* = 0; paint* = 1; invert* = 2;  (*modes*)
     (* base = 0E7F00H;  adr of 1024 x 768 pixel, monocolor display frame*)
 
-  TYPE Frame* = POINTER TO FrameDesc;
+  TYPE 
+    Frame* = POINTER TO FrameDesc;
     FrameMsg* = RECORD END ;
     Handler* = PROCEDURE (F: Frame; VAR M: FrameMsg);
     FrameDesc* = RECORD next*, dsc*: Frame;
@@ -30,9 +34,10 @@ MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / AP 9.3.20 Extended Oberon*)
         handle*: Handler
       END ;
 
-  VAR Base*, Width*, Height*, Depth*, Span, Pack, black*, white*, bgcolor*, fgcolor*: INTEGER;
+  VAR 
+    Base*, Width*, Height*, Depth*, Span, Pack, black*, white*, bgcolor*, fgcolor*: INTEGER;
     arrow*, star*, hook*, updown*, block*, cross*, grey*: INTEGER;
-    (*a pattern is an array of bytes; the first is its width (< 32), the second its height, the rest the raster*)
+
 
   (* begin-procedure-description
 ---
