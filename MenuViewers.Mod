@@ -11,6 +11,12 @@ MODULE MenuViewers; (*JG 26.8.90 / 16.9.93 / NW 10.3.13 / AP 12.2.20 Extended Ob
   TYPE Viewer* = POINTER TO ViewerDesc;
     ViewerDesc* = RECORD (Viewers.ViewerDesc) menuH*: INTEGER END;
 
+  VAR
+
+  (* begin-section-description
+## ---------- Oberon Message Handling
+  end-section-description *)
+
   PROCEDURE Draw (V: Viewer; Y, H, col: INTEGER);
   BEGIN
     Display.ReplConst(col, V.X, Y, 1, H, Display.replace);

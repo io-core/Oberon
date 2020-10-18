@@ -38,6 +38,9 @@ MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / AP 9.3.20 Extended Oberon*)
     Base*, Width*, Height*, Depth*, Span, Pack, black*, white*, bgcolor*, fgcolor*: INTEGER;
     arrow*, star*, hook*, updown*, block*, cross*, grey*: INTEGER;
 
+  (* begin-section-description
+## ---------- Oberon Message Handling
+  end-section-description *)
 
   (* begin-procedure-description
 ---
