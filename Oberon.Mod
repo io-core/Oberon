@@ -501,7 +501,8 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
   PROCEDURE Reset*;
   BEGIN
     IF CurTask.state = active THEN Remove(CurTask) END ;
-    SYSTEM.LDREG(14, Kernel.stackOrg); (*reset stack pointer*) Loop
+    SYSTEM.LDREG(14, Kernel.stackOrg); (*reset stack pointer*) 
+    Loop
   END Reset;
 
 BEGIN User[0] := 0X;
