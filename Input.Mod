@@ -65,9 +65,10 @@ MODULE Input; (*NW 5.10.86 / 15.11.90 Ceres-2; PDR 21.4.12 / NW 15.5.2013 Ceres-
 
   (* begin-procedure-description
 ---  
-**Read** delivers ascii values of pressed keys.
+**ReadUnicode** delivers unicode values of pressed keys.
   end-procedure-description *)
-  PROCEDURE Read*(VAR ch: CHAR);
+  PROCEDURE ReadUnicode*(VAR codepoint: INTEGER);
+  VAR ch: CHAR;
   BEGIN
     WHILE ~Recd DO Peek() END ;
     IF Shift OR Ctrl THEN INC(kbdCode, 80H) END; (*ctrl implies shift*)
@@ -75,7 +76,8 @@ MODULE Input; (*NW 5.10.86 / 15.11.90 Ceres-2; PDR 21.4.12 / NW 15.5.2013 Ceres-
     SYSTEM.GET(KTabAdr + kbdCode, ch);
     IF Ctrl THEN ch := CHR(ORD(ch) MOD 20H) END;
     Recd := FALSE
-  END Read;
+    codepoint := ORD(ch);
+  END ReadUnicode;
 
 
   (* begin-section-description
