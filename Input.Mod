@@ -1,19 +1,25 @@
 (* begin-module-use-description
 Module Input reads keyboard and mouse raw data and returns ASCII values and mouse state to Oberon.
 
-Input uses SYSTEM
-
-
 end-module-use-description *)
-MODULE Input; (*NW 5.10.86 / 15.11.90 Ceres-2; PDR 21.4.12 / NW 15.5.2013 Ceres-4 / AP 9.3.20 Extended Oberon*)
+(* begin-module-develop-description
+
+(NW 5.10.86 / 15.11.90 Ceres-2; PDR 21.4.12 / NW 15.5.2013 Ceres-4 / PDW 19.4.2016)
+
+**Input** is the interface to the keyboard and mouse in Oberon.
+
+end-module-develop-description *)
+MODULE Input; (*NW 5.10.86 / 15.11.90 Ceres-2; PDR 21.4.12 / NW 15.5.2013 Ceres-4 / PDW 19.4.2016*)
+(* Adapted for a customizable framebuffer size -- see git history *)
   IMPORT SYSTEM;
 
-  CONST msAdr = -40; kbdAdr = -36;
-   (*ascii codes*) NUL* = 0X; BS* = 08X; TAB* = 09X; LF* = 0AX; CR* = 0DX; SUB* = 1AX; ESC* = 1BX; SPC* = 20X; DEL* = 7FX;
-   (*text control*) CtrlA* = 1X; CtrlC* = 03X; CtrlV* = 16X; CtrlX* = 18X;
-   (*cursor keys*) CursorLeft* = 11X; CursorRight* = 12X; CursorUp* = 13X; CursorDown* = 14X;
+  CONST 
+    msAdr = -40; kbdAdr = -36;
 
-  VAR kbdCode: BYTE; (*last keyboard code read*)
+  TYPE
+
+  VAR 
+    kbdCode: BYTE; (*last keyboard code read*)
     Recd, Up, Shift, Ctrl, Ext: BOOLEAN;
     KTabAdr: INTEGER;  (*keyboard code translation table*)
     MW, MH, MX, MY: INTEGER; (*mouse limits and coords*)
@@ -21,7 +27,16 @@ MODULE Input; (*NW 5.10.86 / 15.11.90 Ceres-2; PDR 21.4.12 / NW 15.5.2013 Ceres-
 
 (*FIFO implemented in hardware, because every read must be handled,
   including tracking the state of the Shift and Ctrl keys*)
-  
+
+
+  (* begin-section-description
+## ---------- Keyboard
+  end-section-description *)
+
+  (* begin-procedure-description
+---
+**Peek** checks to see if a key has been pressed or released.
+  end-procedure-description *)
   PROCEDURE Peek();
   BEGIN
     IF SYSTEM.BIT(msAdr, 28) THEN
@@ -38,11 +53,20 @@ MODULE Input; (*NW 5.10.86 / 15.11.90 Ceres-2; PDR 21.4.12 / NW 15.5.2013 Ceres-
     END;
   END Peek;
 
+
+  (* begin-procedure-description
+---
+**Available** returns the available keypress.
+  end-procedure-description *)
   PROCEDURE Available*(): INTEGER;
   BEGIN Peek();
     RETURN ORD(Recd)
   END Available;
 
+  (* begin-procedure-description
+---  
+**Read** delivers ascii values of pressed keys.
+  end-procedure-description *)
   PROCEDURE Read*(VAR ch: CHAR);
   BEGIN
     WHILE ~Recd DO Peek() END ;
@@ -52,15 +76,16 @@ MODULE Input; (*NW 5.10.86 / 15.11.90 Ceres-2; PDR 21.4.12 / NW 15.5.2013 Ceres-
     IF Ctrl THEN ch := CHR(ORD(ch) MOD 20H) END;
     Recd := FALSE
   END Read;
-(*
-  PROCEDURE Mouse*(VAR keys: SET; VAR x, y: INTEGER);
-    VAR w: INTEGER;
-  BEGIN SYSTEM.GET(msAdr, w);
-    keys := SYSTEM.VAL(SET, w DIV 1000000H MOD 8);
-    x := w MOD 400H; y := (w DIV 1000H) MOD 400H;
-    IF y >= MH THEN y := MH-1 END
-  END Mouse;
-*)
+
+
+  (* begin-section-description
+## ---------- Mouse
+  end-section-description *)
+
+  (* begin-procedure-description
+---  
+**Mouse** provides the curent position and button state of the mouse.
+  end-procedure-description *)
   PROCEDURE Mouse*(VAR keys: SET; VAR x, y: INTEGER);
     VAR w: INTEGER;
   BEGIN SYSTEM.GET(msAdr, w);
@@ -70,10 +95,23 @@ MODULE Input; (*NW 5.10.86 / 15.11.90 Ceres-2; PDR 21.4.12 / NW 15.5.2013 Ceres-
     IF y >= MH THEN y := MH-1 END
   END Mouse;
 
+  (* begin-procedure-description
+---  
+**SetMouseLimits** restricts the mouse to the extent of the screen.
+  end-procedure-description *)
   PROCEDURE SetMouseLimits*(w, h: INTEGER);
   BEGIN MW := w; MH := h
   END SetMouseLimits;
 
+
+  (* begin-section-description
+## ---------- Initialization
+  end-section-description *)
+
+  (* begin-procedure-description
+---
+**Init** sets the keyboard initial state and populates the scancode to ascii table.
+  end-procedure-description *)
   PROCEDURE Init*;
   BEGIN Up := FALSE; Shift := FALSE; Ctrl := FALSE; Recd := FALSE;
     KTabAdr := SYSTEM.ADR($
