@@ -1,14 +1,13 @@
 k,v1,v2
-package,Oberon,v5.1.0
+package,Oberon,v5.0.20190117
 from,github.com/io-core,whenever
-license,PROJECTOBERON,NW JG PDR MS CP
-doc,core,implements the user-interaction functionality and the task loop of the system.
-r,[io-core]/Edit,v5.1.0
+license,PROJECTOBERON,NW JG PDR
+r,[core]/Modules,v5.0.0
+r,[core]/Edit,v5.0.0
 r,[core]/Kernel,v5.0.0
 r,[core]/Files,v5.0.0
-r,[core]/Modules,v5.0.0
-p,Oberon.Mod,a427a83c7b04278a6d51ccef9a88c854656aeece870d9f8cb6bfe947400236d1
-p,MenuViewers.Mod,3f49849f9103be0c466df69c1c73324137416a85bb27b993e943ae6e56c89f89
-p,Viewers.Mod,68dd972188ccca1b91c0f1e26204ce2cdec73098501c0fc15db334bbfab6ffe7
-p,Display.Mod,4157ff39acbdc7dcfecab8903fb8a99386ec89c6247de09e224faf6d2e4f4657
-p,Input.Mod,c4add3b8d70c0ae4a77c972bb7ae7fc77e3169566cb2afb9cadeadee998a055f
+doc,core,implements the user-interaction functionality and the task loop of the system.
+p,Oberon.Mod,cc84a2c0a7c9fa7244a02dbdc7e7f7bd15cfeb7d3903d14950666c95626897e0
+p,Viewers.Mod,d7991eabdff1cb6b06c4a085f1a5a05bf10cc03398bcf03b9d47241865d357ae
+p,Display.Mod,d7095213ac8cec4fe11bcb5400dd8ee120218d31c58d9012cbf74e6a7d573161
+p,Input.Mod,4eb36a06d406512335c595b830600cf9df42eb6e351c22d7ca27358c7ec5ce5d
