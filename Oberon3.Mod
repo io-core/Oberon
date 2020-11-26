@@ -594,9 +594,15 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015*)
           IF Y >= Display.Height THEN Y := Display.Height END ;
           M.Y := Y; M.keys := keys; V := Viewers.This(X, Y); V.handle(V, M); prevX := X; prevY := Y
         END;
+        SYSTEM.PUT(-64, minTime);
         CurTask := CurTask.next; t := Kernel.Time();
         IF t >= CurTask.nextTime THEN
           CurTask.nextTime := t + CurTask.period; CurTask.state := active; CurTask.handle; CurTask.state := idle
+          ;minTime := CurTask.nextTime;
+          FOR t := 1 TO NofTasks DO
+            CurTask := CurTask.next;
+            IF CurTask.nextTime < minTime THEN minTime := CurTask.nextTime END;
+          END
         END
       END
     UNTIL FALSE
