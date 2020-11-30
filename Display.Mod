@@ -1,4 +1,4 @@
-ot(* begin-module-use-description
+(* begin-module-use-description
 Module Display implements the drawing primitives for the frame buffer device in Oberon.
 
 A pattern is an array of bytes; the first is its width (< 32), the second its height, the rest the raster data.
@@ -40,7 +40,7 @@ MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / PDW 21.1.2019 *)
 
   VAR 
     Base*, Width*, Height*, Span: INTEGER;
-    arrow*, star*, hook*, updown*, block*, bot*, cross*, grey*: INTEGER;
+    arrow*, star*, hook*, updown*, block*, top*, bot*, cross*, grey*: INTEGER;
     (*a pattern is an array of bytes; the first is its width (< 32), the second its height, the rest the raster*)
 
   (* begin-section-description
@@ -286,7 +286,8 @@ BEGIN InitResolution;
   hook := SYSTEM.ADR($0C0C 070F 8707 C703 E701 F700 7F00 3F00 1F00 0F00 0700 0300 01$);
   updown := SYSTEM.ADR($080E 183C 7EFF 1818 1818 1818 FF7E3C18$);
   block := SYSTEM.ADR($0808 FFFF C3C3 C3C3 FFFF$);
-  bot := SYSTEM.ADR($0808 C3C3 C3C3 C3C3 FFFF$);
+  top := SYSTEM.ADR($0808 1818 1818 1818 FFFF$);
+  bot := SYSTEM.ADR($0808 FFFF 1818 1818 1818$);
   cross := SYSTEM.ADR($0F0F 0140 0220 0410 0808 1004 2002 4001 0000 4001 2002 1004 0808 0410 0220 0140$);
   grey := SYSTEM.ADR($2002 0000 5555 5555 AAAA AAAA$)
 END Display.
