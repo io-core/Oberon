@@ -15,11 +15,14 @@ MODULE Input; (*NW 5.10.86 / 15.11.90 Ceres-2; PDR 21.4.12 / NW 15.5.2013 Ceres-
 
   CONST 
     msAdr = -40; kbdAdr = -36;
+   (*ascii codes   NUL* = 0X; BS* = 08X; TAB* = 09X; LF* = 0AX; CR* = 0DX; SUB* = 1AX; ESC* = 1BX; SPC* = 20X; DEL* = 7FX; *)
+   (*text control   CtrlA* = 1X; CtrlC* = 03X; CtrlV* = 16X; CtrlX* = 18X;                                                 *)
+   (*cursor keys   CursorLeft* = 11X; CursorRight* = 12X; CursorUp* = 13X; CursorDown* = 14X;                              *)
 
   TYPE
 
   VAR 
-    kbdCode: BYTE; (*last keyboard code read*)
+    kbdCode, extCode: BYTE; (*last keyboard code read*)
     Recd, Up, Shift, Ctrl, Ext: BOOLEAN;
     KTabAdr: INTEGER;  (*keyboard code translation table*)
     MW, MH, MX, MY: INTEGER; (*mouse limits and coords*)
@@ -46,7 +49,8 @@ MODULE Input; (*NW 5.10.86 / 15.11.90 Ceres-2; PDR 21.4.12 / NW 15.5.2013 Ceres-
       ELSE
         IF (kbdCode = 12H) OR (kbdCode = 59H) THEN (*shift*) Shift := ~Up
         ELSIF kbdCode = 14H THEN (*ctrl*) Ctrl := ~Up
-        ELSIF ~Up THEN Recd := TRUE (*real key going down*)
+        ELSIF ~Up THEN Recd := TRUE; (*real key going down*)
+          IF Ext THEN extCode := kbdCode; kbdCode := 58H END
         END ;
         Up := FALSE; Ext := FALSE
       END
@@ -71,12 +75,29 @@ MODULE Input; (*NW 5.10.86 / 15.11.90 Ceres-2; PDR 21.4.12 / NW 15.5.2013 Ceres-
   VAR ch: CHAR;
   BEGIN
     WHILE ~Recd DO Peek() END ;
-    IF Shift OR Ctrl THEN INC(kbdCode, 80H) END; (*ctrl implies shift*)
-  (* ch := kbdTab[kbdCode]; *)
-    SYSTEM.GET(KTabAdr + kbdCode, ch);
-    IF Ctrl THEN ch := CHR(ORD(ch) MOD 20H) END;
-    Recd := FALSE;
-    codepoint := ORD(ch);
+    IF kbdCode = 58H THEN
+      IF    extCode = 75H THEN (*up*)    codepoint := -1
+      ELSIF extCode = 6BH THEN (*left*)  codepoint := -2
+      ELSIF extCode = 72H THEN (*down*)  codepoint := -3
+      ELSIF extCode = 74H THEN (*right*) codepoint := -4
+      ELSIF extCode = 7DH THEN (*pu*)    codepoint := -5
+      ELSIF extCode = 7AH THEN (*pd*)    codepoint := -6
+      ELSIF extCode = 7FH THEN (*lcmd*)  codepoint := -7
+      ELSIF extCode = 27H THEN (*rcmd*)  codepoint := -8
+      ELSIF extCode = 70H THEN (*ins*)   codepoint := -9
+      ELSIF extCode = 71H THEN (*del*)   codepoint := -10
+      ELSIF extCode = 6CH THEN (*home*)  codepoint := -11
+      ELSIF extCode = 69H THEN (*end*)   codepoint := -12
+      END;
+      Recd := FALSE; 
+    ELSE
+      IF Shift OR Ctrl THEN INC(kbdCode, 80H) END; (*ctrl implies shift*)
+      (* ch := kbdTab[kbdCode]; *)
+      SYSTEM.GET(KTabAdr + kbdCode, ch);
+      IF Ctrl THEN ch := CHR(ORD(ch) MOD 20H) END;
+      Recd := FALSE;
+      codepoint := ORD(ch);
+    END
   END ReadUnicode;
 
 
