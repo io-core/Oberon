@@ -1,3 +1,40 @@
+(* begin-documentation-node
+###################
+  IO Core Packages
+###################
+
+
+.. toctree::
+   :maxdepth: 2
+   :caption: IO Core Packages:
+   :hidden:
+
+   ../Boot/Boot       [core/Boot.rst] 
+   ../Kernel/Kernel   [core/Kernel.rst]
+   ../Files/Files     [core/Files.rst]
+   ../Modules/Modules [core/Modules.rst]
+   ../Build/Build     [core/Build.rst]
+   ../Edit/Edit       [core/Edit.rst]
+   ../Oberon/Oberon   [core/Oberon.rst]
+   ../System/System   [core/System.rst]
+
+The Core Packages in Integrated Oberon contain those modules necessary 
+for booting Oberon to a user interface (or to a command loop for an embedded 
+Oberon) and those modules needed to recompile the core of Integrated Oberon.
+
+Four packages comprise an Inner Core of Oberon -- Boot, Kernel, Files, and 
+Modules. The modules in these four packages are linked into a bootable binary
+image that, after being loaded by the boot mechanism of the host platform, will
+load the rest of the Core Oberon system.
+
+https://github.com/io-core/Oberon/blob/main/Oberon.Mod
+
+end-documentation-node *)
+
+(* begin-module-short-description
+implements the Oberon Textual User Interface.
+end-module-short-description *)
+
 (* begin-package-description
 ### _Package Overview:_
 The Oberon package defines the user interface of Oberon.
