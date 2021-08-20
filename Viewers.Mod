@@ -1,3 +1,8 @@
+(* begin-module-short-description
+partitions and manages display panes.
+end-module-short-description *)
+
+
 (* begin-module-use-description
 Module Viewers introduces rectangular areas of the display that present information and 
 react to user input -- 'tracks' and 'viewers'.

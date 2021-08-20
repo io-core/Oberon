@@ -1,3 +1,7 @@
+(* begin-module-short-description
+renders text and graphics to the framebuffer.
+end-module-short-description *)
+
 (* begin-module-use-description
 Module Display implements the drawing primitives for the frame buffer device in Oberon.
 

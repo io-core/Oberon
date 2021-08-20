@@ -664,5 +664,5 @@ BEGIN User[0] := 0X;
   CurFnt := Fonts.Default; CurCol := Display.white; CurOff := 0;
 
   ActCnt := 0; CurTask := NewTask(GC, 1000); Install(CurTask);
-  Modules.Load("System", Mod); Mod := NIL; Loop
+  Modules.Load("System", Mod); SYSTEM.LDREG(14, Kernel.stackOrg); Mod := NIL; Loop
 END Oberon.

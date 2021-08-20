@@ -1,3 +1,8 @@
+(* begin-module-short-description
+presents keyboard and mouse events to the Oberon UI
+end-module-short-description *)
+
+
 (* begin-module-use-description
 Module Input reads keyboard and mouse raw data and returns ASCII values and mouse state to Oberon.
 
@@ -136,7 +141,7 @@ MODULE Input; (*NW 5.10.86 / 15.11.90 Ceres-2; PDR 21.4.12 / NW 15.5.2013 Ceres-
 **Init** sets the keyboard initial state and populates the scancode to ascii table.
   end-procedure-description *)
   PROCEDURE Init*;
-  BEGIN Up := FALSE; Shift := FALSE; Ctrl := FALSE; Recd := FALSE;
+  BEGIN LED(15); Up := FALSE; Shift := FALSE; Ctrl := FALSE; Recd := FALSE;
     KTabAdr := SYSTEM.ADR($
       00 00 00 00 00 1A 00 1C  00 00 00 00 00 09 60 00
       00 00 00 00 00 71 31 00  00 00 7A 73 61 77 32 00
@@ -153,7 +158,8 @@ MODULE Input; (*NW 5.10.86 / 15.11.90 Ceres-2; PDR 21.4.12 / NW 15.5.2013 Ceres-
       00 3C 4B 49 4F 29 28 00  00 3E 3F 4C 3A 50 5F 00
       00 00 22 00 7B 2B 00 00  00 00 0D 7D 00 7C 00 00
       00 00 00 00 00 00 08 00  00 00 00 00 00 00 00 00
-      00 7F 00 00 00 00 1B 00  00 00 00 00 00 00 00 00$)
+      00 7F 00 00 00 00 1B 00  00 00 00 00 00 00 00 00$);
+    LED(128+64+32+16)
   END Init;
 
 BEGIN Init
